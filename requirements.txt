@@ -1,0 +1,19 @@
+# Inti analisis
+pandas
+openpyxl
+matplotlib
+seaborn
+wordcloud
+Sastrawi
+python-dotenv
+
+# Model NLP (transformer)
+torch
+transformers
+sentencepiece
+protobuf
+
+# Scraper
+google-play-scraper      # Play Store
+TikTokApi                # TikTok (butuh: python -m playwright install chromium)
+# App Store memakai RSS resmi Apple via urllib (tanpa library tambahan)

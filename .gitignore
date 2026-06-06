@@ -1,0 +1,25 @@
+# ===== Rahasia / kredensial =====
+.env
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ===== Data mentah hasil scraping (besar / berubah-ubah) =====
+data/
+
+# ===== Hasil analisis (gambar & csv) =====
+output/
+
+# ===== Resource yang diunduh otomatis (lihat setup_resources.py) =====
+resources/
+
+# ===== Lain-lain =====
+*.xlsx
+*.pdf
+.DS_Store
+.ipynb_checkpoints/
