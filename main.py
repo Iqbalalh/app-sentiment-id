@@ -17,6 +17,7 @@ import argparse
 import config
 from runners import PLATFORMS, get_runner
 from setup_resources import download
+from sentiment.report import write_platform_report, write_combined_report
 
 
 def main():
@@ -50,7 +51,18 @@ def main():
             print(f"  [LEWATI] {name}: {err}")
             skipped.append(name)
 
-    # 3) Ringkasan
+    # 3) Laporan analisis (Markdown) per platform + gabungan
+    if succeeded:
+        print(f"\n{'=' * 52}\n  LAPORAN ANALISIS\n{'=' * 52}")
+        for name in succeeded:
+            path = write_platform_report(name)
+            if path:
+                print(f"  - {path}")
+        combined = write_combined_report(succeeded)
+        if combined:
+            print(f"  - {combined}")
+
+    # 4) Ringkasan
     print(f"\n{'=' * 52}\n  RINGKASAN\n{'=' * 52}")
     if succeeded:
         print(f"  Berhasil  : {', '.join(succeeded)}")

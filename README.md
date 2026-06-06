@@ -20,12 +20,18 @@ dan hasil satu platform tidak bercampur dengan platform lain.
 - Klasifikasi tiga kelas berbasis transformer dengan probabilitas per label.
 - Keluaran siap pakai: CSV berlabel, diagram distribusi, pie chart, word cloud,
   dan peringkat kata dominan.
+- Laporan analisis naratif (Markdown) per platform **dan gabungan**: faktor
+  pemicu opini negatif/positif, pemetaan aspek (login, error, performa, dll.),
+  kata/frasa dominan, kutipan representatif, dan kesimpulan akhir.
+- Satu entrypoint (`main.py`) menjalankan seluruh alur end-to-end dengan
+  progress bar pada tahap preprocessing dan klasifikasi.
 
 ## Struktur Proyek
 
 ```
 .
-├── main.py              # entrypoint utama: jalankan seluruh pipeline
+├── main.py              # entrypoint utama: jalankan seluruh pipeline + laporan
+├── report.py            # entrypoint: buat laporan analisis dari output yang ada
 ├── config.py            # konfigurasi terpusat, dibaca dari .env
 ├── setup_resources.py   # unduh kamus normalisasi ke resources/
 ├── requirements.txt
@@ -39,7 +45,9 @@ dan hasil satu platform tidak bercampur dengan platform lain.
 ├── sentiment/           # mesin analisis (dipakai bersama)
 │   ├── preprocessing.py # case folding → cleansing → tokenizing → normalisasi → filtering → stemming
 │   ├── model.py         # klasifikasi transformer
-│   └── pipeline.py      # orkestrasi: data → preprocessing → klasifikasi → visualisasi
+│   ├── pipeline.py      # orkestrasi: data → preprocessing → klasifikasi → visualisasi
+│   ├── insight.py       # ekstraksi aspek, kata kunci, kutipan representatif
+│   └── report.py        # susun laporan analisis (per platform + gabungan)
 │
 ├── runners/             # runner per platform (dipakai main.py / bisa berdiri sendiri)
 │   ├── playstore.py
@@ -139,6 +147,32 @@ Untuk setiap platform, hasil disimpan di `output/<platform>/`:
 - `02_persentase_pie.png` — proporsi sentimen.
 - `03_wordcloud_keseluruhan.png`, `04_wordcloud_negatif.png`, `04_wordcloud_positif.png`.
 - `05_top_kata.png` — 15 kata dominan pada ulasan negatif dan positif.
+- `analisis_<platform>.md` — laporan analisis naratif (lihat di bawah).
+
+## Laporan Analisis
+
+Selain grafik, sistem menghasilkan laporan teks (Markdown, Bahasa Indonesia)
+yang menjelaskan **apa pendapat publik** terhadap aplikasi: faktor yang membuat
+opini negatif, faktor yang membuat opini positif, aspek yang paling sering
+dibahas (login, error/bug, performa, tampilan, dll.), kata/frasa dominan, dan
+kutipan komentar paling representatif.
+
+Laporan ini ikut dibuat otomatis saat menjalankan `python main.py`. Untuk
+membuatnya ulang dari output yang sudah ada (tanpa menjalankan model):
+
+```bash
+python report.py                  # laporan semua platform + laporan gabungan
+python report.py --only playstore # satu platform saja
+```
+
+Berkas yang dihasilkan:
+
+- `output/<platform>/analisis_<platform>.md` — kesimpulan per platform.
+- `output/analisis_gabungan.md` — perbandingan antar platform, kesimpulan tiap
+  platform, analisis seluruh data yang digabung, dan **kesimpulan akhir**.
+
+Analisis bersifat *rule-based* (statistik frekuensi + lexicon aspek), sehingga
+deterministik dan berjalan offline tanpa API.
 
 ## Catatan
 
