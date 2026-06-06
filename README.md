@@ -14,6 +14,9 @@ dan hasil satu platform tidak bercampur dengan platform lain.
 ## Fitur
 
 - Tiga sumber data: Play Store, App Store (RSS resmi Apple), dan TikTok.
+- Pembersihan data sebelum analisis: membuang komentar kosong, komentar tanpa
+  teks (emoji/simbol saja), dan **komentar duplikat (indikasi spam/buzzer)** —
+  dengan pelacakan berapa komentar di-scrap, dipakai, dan dibuang.
 - Preprocessing Bahasa Indonesia: *case folding*, pembersihan, normalisasi slang
   (kamus alay), penghapusan stopword dengan negasi dipertahankan, dan stemming
   (Sastrawi).
@@ -43,6 +46,7 @@ dan hasil satu platform tidak bercampur dengan platform lain.
 │   └── tiktok.py
 │
 ├── sentiment/           # mesin analisis (dipakai bersama)
+│   ├── cleaning.py      # buang komentar kosong/spam/duplikat + lacak provenance
 │   ├── preprocessing.py # case folding → cleansing → tokenizing → normalisasi → filtering → stemming
 │   ├── model.py         # klasifikasi transformer
 │   ├── pipeline.py      # orkestrasi: data → preprocessing → klasifikasi → visualisasi
@@ -148,14 +152,20 @@ Untuk setiap platform, hasil disimpan di `output/<platform>/`:
 - `03_wordcloud_keseluruhan.png`, `04_wordcloud_negatif.png`, `04_wordcloud_positif.png`.
 - `05_top_kata.png` — 15 kata dominan pada ulasan negatif dan positif.
 - `analisis_<platform>.md` — laporan analisis naratif (lihat di bawah).
+- `meta_<platform>.json` — statistik pembersihan (jumlah di-scrap/dipakai/dibuang).
 
 ## Laporan Analisis
 
 Selain grafik, sistem menghasilkan laporan teks (Markdown, Bahasa Indonesia)
-yang menjelaskan **apa pendapat publik** terhadap aplikasi: faktor yang membuat
-opini negatif, faktor yang membuat opini positif, aspek yang paling sering
-dibahas (login, error/bug, performa, tampilan, dll.), kata/frasa dominan, dan
-kutipan komentar paling representatif.
+yang menjelaskan **apa pendapat publik** terhadap aplikasi: cakupan & pembersihan
+data (berapa komentar di-scrap, dipakai, dan dibuang), faktor yang membuat opini
+negatif, faktor yang membuat opini positif, aspek yang paling sering dibahas
+(login, error/bug, performa, tampilan, dll.), kata/frasa dominan, dan kutipan
+komentar paling representatif.
+
+Pada laporan gabungan, distribusi sentimen juga disajikan dalam versi
+**ternormalisasi** (rata-rata dengan bobot setara antar platform), dan
+kesimpulan akhir mengikuti distribusi ternormalisasi ini.
 
 Laporan ini ikut dibuat otomatis saat menjalankan `python main.py`. Untuk
 membuatnya ulang dari output yang sudah ada (tanpa menjalankan model):

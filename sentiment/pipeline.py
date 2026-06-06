@@ -6,6 +6,7 @@ Fungsi `analyze(df, platform)` bersifat MANDIRI: ia hanya membaca DataFrame
 yang diberikan dan menulis ke folder output/<platform>/ sehingga menjalankan
 satu platform tidak memengaruhi platform lain.
 """
+import json
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -15,22 +16,12 @@ import pandas as pd
 from tqdm import tqdm
 
 from config import output_dir, APP_NAME
+from sentiment.cleaning import prepare
 from sentiment.preprocessing import process
 from sentiment.model import build_classifier, classify
 
 # Pemetaan label sentimen (nilai data) ke warna grafik.
 COLORS = {"positif": "#2e9e5b", "netral": "#9e9e9e", "negatif": "#d64545"}
-
-
-def _prepare_df(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    if "comment" not in df.columns:
-        raise ValueError("DataFrame harus punya kolom 'comment'.")
-    df["comment"] = df["comment"].astype(str).str.strip()
-    df = df[(df["comment"].str.len() > 0) & (df["comment"].str.lower() != "nan")]
-    df = df.reset_index(drop=True)
-    df.insert(0, "id", range(1, len(df) + 1))
-    return df
 
 
 def _plot(df, dist, percent, out_dir, platform):
@@ -94,11 +85,16 @@ def _plot(df, dist, percent, out_dir, platform):
     return top_words
 
 
-def analyze(df: pd.DataFrame, platform: str) -> pd.DataFrame:
+def analyze(df: pd.DataFrame, platform: str, n_scraped: int = None) -> pd.DataFrame:
     out_dir = output_dir(platform)
-    print(f"[1/4] Menyiapkan data ({platform})...")
-    df = _prepare_df(df)
-    print(f"      Total komentar: {len(df)}")
+    print(f"[1/4] Menyiapkan & membersihkan data ({platform})...")
+    df, prov = prepare(df, n_scraped=n_scraped)
+    print(f"      Di-scrap: {prov['scraped']} | dipakai: {prov['dipakai']} | "
+          f"dibuang: {prov['dibuang']} "
+          f"(kosong {prov['kosong']}, tanpa teks {prov['tanpa_teks']}, "
+          f"spam/duplikat {prov['spam_duplikat']})")
+    (out_dir / f"meta_{platform}.json").write_text(
+        json.dumps(prov, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print("[2/4] Preprocessing (case folding -> cleansing -> tokenizing -> "
           "normalisasi -> filtering -> stemming)...")

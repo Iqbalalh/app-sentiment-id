@@ -6,6 +6,7 @@ Mengekstrak: statistik ringkas, kata & frasa dominan per sentimen, pemetaan
 aspek (lewat lexicon), serta kutipan komentar paling representatif. Murni
 berbasis data/aturan, tanpa model atau layanan eksternal.
 """
+import json
 import re
 from collections import Counter
 
@@ -45,6 +46,14 @@ def load_result(platform):
     if not path.exists():
         return None
     return pd.read_csv(path)
+
+
+def load_meta(platform):
+    """Muat provenance pembersihan data (meta_<platform>.json); None bila tidak ada."""
+    path = output_dir(platform) / f"meta_{platform}.json"
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _tokens(series):

@@ -27,7 +27,8 @@ def run_pipeline(platform, scrape_fn, need_scrape, sample):
         return None
 
     df = pd.read_csv(path)
+    n_scraped = len(df)
     if sample and sample < len(df):
         df = df.sample(sample, random_state=42).reset_index(drop=True)
-        print(f"  Memakai sampel acak: {len(df)} komentar")
-    return analyze(df, platform)
+        print(f"  Memakai sampel acak: {len(df)} dari {n_scraped} komentar")
+    return analyze(df, platform, n_scraped=n_scraped)
