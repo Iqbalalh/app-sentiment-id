@@ -36,7 +36,7 @@ dan hasil satu platform tidak bercampur dengan platform lain.
 │   ├── appstore.py
 │   └── tiktok.py
 │
-├── sentimen/            # mesin analisis (dipakai bersama)
+├── sentiment/           # mesin analisis (dipakai bersama)
 │   ├── preprocessing.py # case folding → cleansing → tokenizing → normalisasi → filtering → stemming
 │   ├── model.py         # klasifikasi transformer
 │   └── pipeline.py      # orkestrasi: data → preprocessing → klasifikasi → visualisasi
@@ -117,17 +117,17 @@ Tiap runner juga bisa dipanggil sendiri lewat `python -m runners.<platform>`,
 dengan argumen jumlah data spesifik per platform.
 
 ```bash
-python -m runners.playstore --scrape --jumlah 3000
-python -m runners.appstore  --scrape --halaman 10
-python -m runners.tiktok    --scrape --jumlah 300
+python -m runners.playstore --scrape --count 3000
+python -m runners.appstore  --scrape --pages 10
+python -m runners.tiktok    --scrape --count 300
 python -m runners.playstore --sample 1500
 ```
 
 | Argumen     | Berlaku pada        | Keterangan                                  |
 | ----------- | ------------------- | ------------------------------------------- |
 | `--scrape`  | semua               | Ambil data baru sebelum analisis.           |
-| `--jumlah`  | Play Store, TikTok  | Jumlah ulasan / komentar yang diambil.      |
-| `--halaman` | App Store           | Maksimal halaman RSS (±50 ulasan/halaman).  |
+| `--count`   | Play Store, TikTok  | Jumlah ulasan / komentar yang diambil.      |
+| `--pages`   | App Store           | Maksimal halaman RSS (±50 ulasan/halaman).  |
 | `--sample`  | semua               | Analisis N komentar acak (`0` = seluruhnya).|
 
 ## Keluaran

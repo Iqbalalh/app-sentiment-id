@@ -11,29 +11,29 @@ from config import APPSTORE_APP_ID, APPSTORE_COUNTRY
 
 
 def scrape(app_id: str = APPSTORE_APP_ID, country: str = APPSTORE_COUNTRY,
-           max_halaman: int = 10) -> pd.DataFrame:
+           max_pages: int = 10) -> pd.DataFrame:
     if not app_id:
         raise RuntimeError("APPSTORE_APP_ID kosong. Isi di file .env terlebih dahulu.")
     rows = []
-    for page in range(1, max_halaman + 1):
+    for page in range(1, max_pages + 1):
         url = (f"https://itunes.apple.com/{country}/rss/customerreviews/"
                f"id={app_id}/sortBy=mostRecent/page={page}/json")
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         try:
-            data = json.loads(urllib.request.urlopen(req, timeout=30).read().decode("utf-8"))
-        except Exception as e:
-            print(f"  halaman {page}: gagal ({e})")
+            data = json.loads(urllib.request.urlopen(request, timeout=30).read().decode("utf-8"))
+        except Exception as err:
+            print(f"  halaman {page}: gagal ({err})")
             break
-        revs = [e for e in data.get("feed", {}).get("entry", []) if "im:rating" in e]
-        if not revs:
+        entries = [e for e in data.get("feed", {}).get("entry", []) if "im:rating" in e]
+        if not entries:
             break
-        for e in revs:
+        for entry in entries:
             rows.append({
-                "username": e.get("author", {}).get("name", {}).get("label", ""),
-                "comment": e.get("content", {}).get("label", ""),
-                "rating": int(e.get("im:rating", {}).get("label", 0)),
-                "judul": e.get("title", {}).get("label", ""),
+                "username": entry.get("author", {}).get("name", {}).get("label", ""),
+                "comment": entry.get("content", {}).get("label", ""),
+                "rating": int(entry.get("im:rating", {}).get("label", 0)),
+                "judul": entry.get("title", {}).get("label", ""),
                 "sumber": "appstore",
             })
-        print(f"  halaman {page}: {len(revs)} ulasan")
+        print(f"  halaman {page}: {len(entries)} ulasan")
     return pd.DataFrame(rows)

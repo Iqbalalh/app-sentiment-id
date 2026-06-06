@@ -15,13 +15,13 @@ from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 from config import COLLOQUIAL_LEXICON
 
 # Negasi WAJIB dipertahankan (jangan dibuang sebagai stopword)
-NEGASI = {"tidak", "tak", "bukan", "belum", "jangan", "tanpa", "kurang"}
+NEGATION = {"tidak", "tak", "bukan", "belum", "jangan", "tanpa", "kurang"}
 
 
 @lru_cache(maxsize=1)
 def _stopwords():
     sw = set(StopWordRemoverFactory().get_stop_words())
-    return sw - NEGASI
+    return sw - NEGATION
 
 
 @lru_cache(maxsize=1)
@@ -30,15 +30,15 @@ def _stemmer():
 
 
 @lru_cache(maxsize=1)
-def muat_kamus_slang():
+def load_slang_dict():
     """Kamus normalisasi kata tidak baku (slang -> baku)."""
-    kamus = {}
+    slang = {}
     if COLLOQUIAL_LEXICON.exists():
         with open(COLLOQUIAL_LEXICON, encoding="utf-8") as fp:
             for row in csv.DictReader(fp):
-                kamus.setdefault(row["slang"].strip(), row["formal"].strip())
+                slang.setdefault(row["slang"].strip(), row["formal"].strip())
     # override / istilah domain + negasi yang sering muncul
-    kamus.update({
+    slang.update({
         "apk": "aplikasi", "app": "aplikasi", "aplikasinya": "aplikasi",
         "gk": "tidak", "ga": "tidak", "gak": "tidak", "ngga": "tidak",
         "nggak": "tidak", "enggak": "tidak", "engga": "tidak", "kga": "tidak",
@@ -48,35 +48,35 @@ def muat_kamus_slang():
         "sertipikat": "sertifikat", "ngebug": "error", "ngeprank": "menipu",
         "lemot": "lambat", "woi": "", "woii": "", "wooii": "", "dong": "",
     })
-    return kamus
+    return slang
 
 
 # ---------------- fungsi tahap-per-tahap ----------------
-def case_folding(teks: str) -> str:
-    return teks.lower()
+def case_folding(text: str) -> str:
+    return text.lower()
 
 
-def cleansing(teks: str) -> str:
-    teks = re.sub(r"http\S+|www\.\S+", " ", teks)   # URL
-    teks = re.sub(r"@\w+", " ", teks)               # mention
-    teks = re.sub(r"#\w+", " ", teks)               # hashtag
-    teks = re.sub(r"[^a-z\s]", " ", teks)           # angka/emoji/simbol
-    teks = re.sub(r"(.)\1{2,}", r"\1", teks)        # elongasi: "bagusss"->"bagus"
-    teks = re.sub(r"\s+", " ", teks).strip()
-    return teks
+def cleansing(text: str) -> str:
+    text = re.sub(r"http\S+|www\.\S+", " ", text)   # URL
+    text = re.sub(r"@\w+", " ", text)               # mention
+    text = re.sub(r"#\w+", " ", text)               # hashtag
+    text = re.sub(r"[^a-z\s]", " ", text)           # angka/emoji/simbol
+    text = re.sub(r"(.)\1{2,}", r"\1", text)        # elongasi: "bagusss"->"bagus"
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
 
 
-def tokenizing(teks: str):
-    return teks.split()
+def tokenizing(text: str):
+    return text.split()
 
 
-def normalisasi(tokens, kamus=None):
-    kamus = kamus or muat_kamus_slang()
-    hasil = []
-    for t in tokens:
-        t = kamus.get(t, t)
-        hasil.extend(t.split())     # slang bisa jadi 2 kata: "gabisa"->"tidak bisa"
-    return hasil
+def normalize(tokens, slang=None):
+    slang = slang or load_slang_dict()
+    result = []
+    for token in tokens:
+        token = slang.get(token, token)
+        result.extend(token.split())    # slang bisa jadi 2 kata: "gabisa"->"tidak bisa"
+    return result
 
 
 def filtering(tokens):
@@ -85,17 +85,17 @@ def filtering(tokens):
 
 
 def stemming(tokens):
-    stem = _stemmer()
-    return [stem.stem(t) for t in tokens]
+    stemmer = _stemmer()
+    return [stemmer.stem(t) for t in tokens]
 
 
-def proses(teks: str):
+def process(text: str):
     """Jalankan seluruh tahap. Mengembalikan (tokens_norm, text_clean).
 
     - tokens_norm : token ternormalisasi (negasi terjaga) -> untuk analisis lanjutan
     - text_clean  : teks bersih + stopword removal + stemming -> untuk wordcloud/frekuensi
     """
-    kamus = muat_kamus_slang()
-    norm = normalisasi(tokenizing(cleansing(case_folding(teks))), kamus)
+    slang = load_slang_dict()
+    norm = normalize(tokenizing(cleansing(case_folding(text))), slang)
     clean = stemming(filtering(norm))
     return norm, " ".join(clean)

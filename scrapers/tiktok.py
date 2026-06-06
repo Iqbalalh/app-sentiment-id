@@ -15,38 +15,38 @@ import pandas as pd
 from config import TIKTOK_MS_TOKEN, TIKTOK_VIDEO_IDS
 
 
-async def _komentar_video(video_id, jumlah=300):
+async def _video_comments(video_id, count=300):
     from TikTokApi import TikTokApi
     rows = []
     async with TikTokApi() as api:
         await api.create_sessions(ms_tokens=[TIKTOK_MS_TOKEN], num_sessions=1, sleep_after=3)
         video = api.video(id=video_id)
-        async for c in video.comments(count=jumlah):
-            d = c.as_dict
+        async for comment in video.comments(count=count):
+            data = comment.as_dict
             rows.append({
                 "video_id": video_id,
-                "username": d.get("user", {}).get("unique_id", ""),
-                "comment": d.get("text", ""),
-                "likes": d.get("digg_count", 0),
+                "username": data.get("user", {}).get("unique_id", ""),
+                "comment": data.get("text", ""),
+                "likes": data.get("digg_count", 0),
                 "sumber": "tiktok",
             })
     return rows
 
 
-async def _scrape_async(video_ids, jumlah):
-    semua = []
-    for vid in video_ids:
+async def _scrape_async(video_ids, count):
+    all_rows = []
+    for video_id in video_ids:
         try:
-            semua += await _komentar_video(vid, jumlah)
-            print(f"  video {vid}: total terkumpul {len(semua)}")
-        except Exception as e:
-            print(f"  gagal video {vid}: {e}")
-    return semua
+            all_rows += await _video_comments(video_id, count)
+            print(f"  video {video_id}: total terkumpul {len(all_rows)}")
+        except Exception as err:
+            print(f"  gagal video {video_id}: {err}")
+    return all_rows
 
 
-def scrape(video_ids=None, jumlah: int = 300) -> pd.DataFrame:
+def scrape(video_ids=None, count: int = 300) -> pd.DataFrame:
     if not TIKTOK_MS_TOKEN:
         raise RuntimeError("TIKTOK_MS_TOKEN kosong. Isi di file .env terlebih dahulu.")
     video_ids = video_ids or TIKTOK_VIDEO_IDS
-    rows = asyncio.run(_scrape_async(video_ids, jumlah))
+    rows = asyncio.run(_scrape_async(video_ids, count))
     return pd.DataFrame(rows)
