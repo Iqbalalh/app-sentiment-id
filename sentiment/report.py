@@ -7,7 +7,8 @@ yang diakhiri kesimpulan menyeluruh.
 import pandas as pd
 
 from config import OUTPUT_DIR, APP_NAME, output_dir
-from sentiment.insight import build_insight, load_result, summarize, SENTIMENTS
+from sentiment.insight import (build_insight, load_result, load_meta,
+                               summarize, SENTIMENTS)
 
 PLATFORM_LABEL = {
     "playstore": "Google Play Store",
@@ -45,6 +46,47 @@ def _quotes_block(quote_list):
     if not quote_list:
         return "_Tidak ada contoh._"
     return "\n".join(f"> {q}" for q in quote_list)
+
+
+def _coverage_block(meta):
+    """Tabel provenance: berapa di-scrap, dipakai, dan dibuang (per alasan)."""
+    if not meta:
+        return ("_Statistik pembersihan belum tersedia. Jalankan ulang "
+                "`python main.py` untuk menghasilkannya._")
+    lines = ["| Tahap | Jumlah |", "| --- | ---: |",
+             f"| Komentar di-scrap | {meta['scraped']} |"]
+    if meta.get("diproses", meta["scraped"]) != meta["scraped"]:
+        lines.append(f"| Diproses (sampel acak) | {meta['diproses']} |")
+    lines += [f"| Dipakai (dianalisis) | {meta['dipakai']} |",
+              f"| Dibuang — kosong/NaN | {meta['kosong']} |",
+              f"| Dibuang — tanpa teks (emoji/simbol) | {meta['tanpa_teks']} |",
+              f"| Dibuang — spam/duplikat (buzzer) | {meta['spam_duplikat']} |",
+              f"| **Total dibuang** | **{meta['dibuang']}** |"]
+    base = max(meta.get("diproses", meta["scraped"]), 1)
+    pct = round(meta["dibuang"] / base * 100, 1)
+    note = (f"\n\nSebanyak **{meta['dibuang']}** komentar ({pct}%) dibuang sebelum "
+            f"analisis — termasuk **{meta['spam_duplikat']}** komentar duplikat yang "
+            f"terindikasi spam/buzzer — agar hasil tidak bias.")
+    return "\n".join(lines) + note
+
+
+def _normalized_distribution(dfs):
+    """Rata-rata persentase sentimen dengan bobot setara tiap platform
+    (macro-average), agar platform berkomentar banyak tidak mendominasi."""
+    acc = {s: 0.0 for s in SENTIMENTS}
+    for df in dfs.values():
+        pct = summarize(df)["percent"]
+        for s in SENTIMENTS:
+            acc[s] += pct.get(s, 0)
+    n = max(len(dfs), 1)
+    return {s: round(acc[s] / n, 1) for s in SENTIMENTS}
+
+
+def _norm_table(norm):
+    lines = ["| Sentimen | Persentase (ternormalisasi) |", "| --- | ---: |"]
+    for s in SENTIMENTS:
+        lines.append(f"| {s.capitalize()} | {norm[s]}% |")
+    return "\n".join(lines)
 
 
 def _conclusion(label, insight):
@@ -102,10 +144,12 @@ def _insight_body(insight, h):
 
 
 # ---------------- laporan per platform ----------------
-def platform_report_md(platform, df):
+def platform_report_md(platform, df, meta=None):
     label = PLATFORM_LABEL.get(platform, platform.capitalize())
     insight = build_insight(df)
     md = [f"# Analisis Sentimen — {APP_NAME} ({label})", "",
+          "## Cakupan & Pembersihan Data", "",
+          _coverage_block(meta), "",
           _insight_body(insight, "##"),
           "## Kesimpulan", "",
           _conclusion(label, insight), ""]
@@ -117,15 +161,61 @@ def write_platform_report(platform):
     if df is None or len(df) == 0:
         return None
     path = output_dir(platform) / f"analisis_{platform}.md"
-    path.write_text(platform_report_md(platform, df), encoding="utf-8")
+    path.write_text(platform_report_md(platform, df, load_meta(platform)),
+                    encoding="utf-8")
     return path
 
 
 # ---------------- laporan gabungan ----------------
+def _combined_coverage(dfs):
+    """Jumlahkan provenance seluruh platform; None bila tak ada meta."""
+    keys = ("scraped", "dipakai", "kosong", "tanpa_teks", "spam_duplikat", "dibuang")
+    total, found = {k: 0 for k in keys}, False
+    for p in dfs:
+        meta = load_meta(p)
+        if not meta:
+            continue
+        found = True
+        for k in keys:
+            total[k] += meta.get(k, 0)
+    return total if found else None
+
+
+def _final_conclusion(dfs, insight_all):
+    """Kesimpulan akhir berdasarkan distribusi ternormalisasi (bobot setara)."""
+    norm = _normalized_distribution(dfs)
+    norm_dom, norm_pct = max(norm, key=norm.get), max(norm.values())
+    neg = sorted([a for a in insight_all["aspects"] if a["negatif"] > 0],
+                 key=lambda a: a["negatif"], reverse=True)[:3]
+    pos = sorted([a for a in insight_all["aspects"] if a["positif"] > 0],
+                 key=lambda a: a["positif"], reverse=True)[:3]
+    parts = [f"Secara keseluruhan, dengan bobot setara antar platform, opini publik "
+             f"terhadap {APP_NAME} cenderung **{norm_dom}** ({norm_pct}%)."]
+    if neg:
+        parts.append("Pemicu opini negatif lintas platform terutama berkaitan dengan "
+                     + ", ".join(f"**{a['aspek'].lower()}**" for a in neg) + ".")
+    if pos:
+        parts.append("Hal yang paling diapresiasi berkaitan dengan "
+                     + ", ".join(f"**{a['aspek'].lower()}**" for a in pos) + ".")
+    return " ".join(parts)
+
+
 def combined_report_md(dfs):
     names = ", ".join(PLATFORM_LABEL.get(p, p) for p in dfs)
     md = [f"# Analisis Sentimen Gabungan — {APP_NAME}", "",
           f"Laporan ini menggabungkan {len(dfs)} sumber data: {names}.", ""]
+
+    # Cakupan data keseluruhan
+    cov = _combined_coverage(dfs)
+    if cov:
+        md += ["## Cakupan Data (Seluruh Platform)", "",
+               "| Tahap | Jumlah |", "| --- | ---: |",
+               f"| Komentar di-scrap | {cov['scraped']} |",
+               f"| Dipakai (dianalisis) | {cov['dipakai']} |",
+               f"| Dibuang — kosong/NaN | {cov['kosong']} |",
+               f"| Dibuang — tanpa teks | {cov['tanpa_teks']} |",
+               f"| Dibuang — spam/duplikat (buzzer) | {cov['spam_duplikat']} |",
+               f"| **Total dibuang** | **{cov['dibuang']}** |", ""]
 
     # Tabel perbandingan antar platform
     md += ["## Perbandingan Antar Platform", "",
@@ -140,6 +230,12 @@ def combined_report_md(dfs):
                   f"{pr.get('negatif', 0)}% | {s['dominant'].capitalize()} | {rating} |")
     md.append("")
 
+    # Distribusi ternormalisasi (bobot setara antar platform)
+    md += ["## Distribusi Ternormalisasi (Bobot Setara Antar Platform)", "",
+           "Distribusi berikut merata-ratakan persentase sentimen tiap platform "
+           "dengan bobot setara.",
+           "", _norm_table(_normalized_distribution(dfs)), ""]
+
     # Kesimpulan ringkas tiap platform
     md += ["## Kesimpulan per Platform", ""]
     for p, df in dfs.items():
@@ -153,7 +249,7 @@ def combined_report_md(dfs):
            _insight_body(insight_all, "###")]
 
     # Kesimpulan akhir
-    md += ["## Kesimpulan Akhir", "", _conclusion("ketiga platform", insight_all), ""]
+    md += ["## Kesimpulan Akhir", "", _final_conclusion(dfs, insight_all), ""]
     return "\n".join(md)
 
 
