@@ -16,7 +16,7 @@ import argparse
 
 import config
 from runners import PLATFORMS, get_runner
-from setup_resources import unduh
+from setup_resources import download
 
 
 def main():
@@ -36,28 +36,28 @@ def main():
 
     # 1) Resource
     print("\n[Resource] Memastikan kamus normalisasi tersedia...")
-    unduh(config.COLLOQUIAL_URL, config.COLLOQUIAL_LEXICON)
+    download(config.COLLOQUIAL_URL, config.COLLOQUIAL_LEXICON)
 
     # 2) Jalankan tiap platform
     platforms = [args.only] if args.only else list(PLATFORMS)
-    berhasil, dilewati = [], []
-    for nama in platforms:
-        print(f"\n{'=' * 52}\n  PLATFORM: {nama.upper()}\n{'=' * 52}")
+    succeeded, skipped = [], []
+    for name in platforms:
+        print(f"\n{'=' * 52}\n  PLATFORM: {name.upper()}\n{'=' * 52}")
         try:
-            hasil = get_runner(nama).jalankan(scrape=args.scrape, sample=args.sample)
-            (berhasil if hasil is not None else dilewati).append(nama)
-        except Exception as e:
-            print(f"  [LEWATI] {nama}: {e}")
-            dilewati.append(nama)
+            result = get_runner(name).run(scrape=args.scrape, sample=args.sample)
+            (succeeded if result is not None else skipped).append(name)
+        except Exception as err:
+            print(f"  [LEWATI] {name}: {err}")
+            skipped.append(name)
 
     # 3) Ringkasan
     print(f"\n{'=' * 52}\n  RINGKASAN\n{'=' * 52}")
-    if berhasil:
-        print(f"  Berhasil  : {', '.join(berhasil)}")
-        for nama in berhasil:
-            print(f"    - {config.output_dir(nama)}")
-    if dilewati:
-        print(f"  Dilewati  : {', '.join(dilewati)} "
+    if succeeded:
+        print(f"  Berhasil  : {', '.join(succeeded)}")
+        for name in succeeded:
+            print(f"    - {config.output_dir(name)}")
+    if skipped:
+        print(f"  Dilewati  : {', '.join(skipped)} "
               f"(belum ada data / belum dikonfigurasi di .env)")
 
 

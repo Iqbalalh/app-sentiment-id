@@ -6,6 +6,7 @@ seaborn
 wordcloud
 Sastrawi
 python-dotenv
+tqdm
 
 # Model NLP (transformer)
 torch
