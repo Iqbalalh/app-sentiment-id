@@ -12,7 +12,7 @@ from functools import lru_cache
 from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFactory
 from Sastrawi.Stemmer.StemmerFactory import StemmerFactory
 
-from config import COLLOQUIAL_LEXICON
+from config import COLLOQUIAL_LEXICON, STEMMING
 
 # Negasi WAJIB dipertahankan (jangan dibuang sebagai stopword)
 NEGATION = {"tidak", "tak", "bukan", "belum", "jangan", "tanpa", "kurang"}
@@ -93,9 +93,15 @@ def process(text: str):
     """Jalankan seluruh tahap. Mengembalikan (tokens_norm, text_clean).
 
     - tokens_norm : token ternormalisasi (negasi terjaga) -> untuk analisis lanjutan
-    - text_clean  : teks bersih + stopword removal + stemming -> untuk wordcloud/frekuensi
+    - text_clean  : teks bersih + stopword removal (+ stemming bila STEMMING=true)
+                    -> untuk wordcloud/frekuensi
+
+    Stemming dimatikan secara default agar kata tetap utuh/natural pada laporan
+    (mis. "jaringan" tidak menjadi "jaring"). Aktifkan lewat STEMMING=true di .env.
     """
     slang = load_slang_dict()
     norm = normalize(tokenizing(cleansing(case_folding(text))), slang)
-    clean = stemming(filtering(norm))
-    return norm, " ".join(clean)
+    tokens = filtering(norm)
+    if STEMMING:
+        tokens = stemming(tokens)
+    return norm, " ".join(tokens)

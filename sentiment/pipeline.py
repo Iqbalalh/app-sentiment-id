@@ -97,7 +97,7 @@ def analyze(df: pd.DataFrame, platform: str, n_scraped: int = None) -> pd.DataFr
         json.dumps(prov, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print("[2/4] Preprocessing (case folding -> cleansing -> tokenizing -> "
-          "normalisasi -> filtering -> stemming)...")
+          "normalisasi -> filtering)...")
     df["text_clean"] = [process(t)[1]
                         for t in tqdm(df["comment"], desc="      preprocessing",
                                       unit="komentar")]

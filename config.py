@@ -50,7 +50,16 @@ TIKTOK_MS_TOKEN = _env("TIKTOK_MS_TOKEN")
 TIKTOK_VIDEO_IDS = _ids(_env("TIKTOK_VIDEO_IDS"))
 
 # ---------------- Model ----------------
-MODEL_NAME = _env("MODEL_NAME", "cardiffnlp/twitter-xlm-roberta-base-sentiment")
+MODEL_NAME = _env("MODEL_NAME", "mdhugol/indonesia-bert-sentiment-classification")
+# Pemetaan label mentah model -> negatif/netral/positif. Kosongkan untuk default
+# (mendukung IndoBERT 'LABEL_0/1/2' dan model berlabel negative/neutral/positive).
+# Format kustom: "LABEL_0=positif,LABEL_1=netral,LABEL_2=negatif".
+MODEL_LABELS = _env("MODEL_LABELS", "")
+
+# ---------------- Preprocessing ----------------
+# Stemming (Sastrawi) memetakan kata ke akarnya; mematikannya menjaga kata tetap
+# utuh/natural pada laporan (mis. "jaringan" tidak menjadi "jaring").
+STEMMING = _env("STEMMING", "false").lower() in ("1", "true", "yes", "on")
 
 
 # ---------------- Path helper (isolasi per platform) ----------------

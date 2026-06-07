@@ -19,8 +19,9 @@ dan hasil satu platform tidak bercampur dengan platform lain.
   dengan pelacakan berapa komentar di-scrap, dipakai, dan dibuang.
 - Preprocessing Bahasa Indonesia: *case folding*, pembersihan, normalisasi slang
   (kamus alay), penghapusan stopword dengan negasi dipertahankan, dan stemming
-  (Sastrawi).
-- Klasifikasi tiga kelas berbasis transformer dengan probabilitas per label.
+  opsional (Sastrawi, default mati).
+- Klasifikasi tiga kelas berbasis transformer (IndoBERT) dengan probabilitas
+  per label, pada kalimat utuh.
 - Keluaran siap pakai: CSV berlabel, diagram distribusi, pie chart, word cloud,
   dan peringkat kata dominan.
 - Laporan analisis naratif (Markdown) per platform **dan gabungan**: faktor
@@ -47,8 +48,8 @@ dan hasil satu platform tidak bercampur dengan platform lain.
 │
 ├── sentiment/           # mesin analisis (dipakai bersama)
 │   ├── cleaning.py      # buang komentar kosong/spam/duplikat + lacak provenance
-│   ├── preprocessing.py # case folding → cleansing → tokenizing → normalisasi → filtering → stemming
-│   ├── model.py         # klasifikasi transformer
+│   ├── preprocessing.py # case folding → cleansing → tokenizing → normalisasi → filtering (→ stemming opsional)
+│   ├── model.py         # klasifikasi transformer (IndoBERT)
 │   ├── pipeline.py      # orkestrasi: data → preprocessing → klasifikasi → visualisasi
 │   ├── insight.py       # ekstraksi aspek, kata kunci, kutipan representatif
 │   └── report.py        # susun laporan analisis (per platform + gabungan)
@@ -96,7 +97,9 @@ Buka `.env` dan isi sesuai aplikasi yang ingin dianalisis.
 | `APPSTORE_COUNTRY`   | Storefront App Store (default `id`).                              |
 | `TIKTOK_MS_TOKEN`    | `msToken` dari cookie browser saat login TikTok.                  |
 | `TIKTOK_VIDEO_IDS`   | Daftar id video, dipisahkan koma.                                 |
-| `MODEL_NAME`         | (opsional) model Hugging Face untuk klasifikasi.                  |
+| `MODEL_NAME`         | (opsional) model Hugging Face. Default: IndoBERT sentimen.        |
+| `MODEL_LABELS`       | (opsional) pemetaan label model → negatif/netral/positif.        |
+| `STEMMING`           | (opsional) `true` untuk stemming kata ke akarnya (default mati).  |
 
 Platform yang tidak dipakai cukup dikosongkan variabelnya.
 
@@ -191,6 +194,12 @@ deterministik dan berjalan offline tanpa API.
 - **TikTok** menggunakan pustaka tidak resmi (`TikTokApi`) dan dapat gagal
   sewaktu-waktu bila TikTok mengubah sistemnya; `msToken` juga perlu diperbarui
   secara berkala.
-- Model bawaan, `cardiffnlp/twitter-xlm-roberta-base-sentiment`, mendukung
-  banyak bahasa termasuk Bahasa Indonesia. Unduhan model pertama kali memerlukan
+- Model bawaan, `mdhugol/indonesia-bert-sentiment-classification` (IndoBERT yang
+  di-*fine-tune* untuk sentimen Bahasa Indonesia), mengklasifikasikan **kalimat
+  utuh** secara kontekstual. Ganti lewat `MODEL_NAME`; jika model baru memakai
+  label berbeda, sesuaikan `MODEL_LABELS`. Unduhan model pertama kali memerlukan
   koneksi internet.
+- Klasifikasi memakai komentar mentah (kalimat asli) agar konteks terjaga;
+  normalisasi slang & stemming hanya memengaruhi kata pada laporan/word cloud.
+  **Stemming dimatikan secara default** supaya kata tetap utuh dan natural
+  (mis. "jaringan" tidak menjadi "jaring"); aktifkan dengan `STEMMING=true`.
